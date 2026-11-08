@@ -24,11 +24,12 @@ export default function App() {
   const [sub, setSub] = useState('');
   const [back, setBack] = useState<Back | null>(null);
   const [hint, setHint] = useState('');
+  const [notice, setNotice] = useState('');
   const [card, setCard] = useState<Card | null>(null);
 
   // 테마를 바꾸면 이전 테마가 남긴 상단/힌트/카드 상태를 비워요.
   const selectTheme = useCallback((id: string) => {
-    setThemeId(id); setFallback(false); setSub(''); setBack(null); setHint(''); setCard(null); setError('');
+    setThemeId(id); setFallback(false); setSub(''); setBack(null); setHint(''); setNotice(''); setCard(null); setError('');
   }, []);
 
   useEffect(() => { document.title = SITE_TITLE; }, []);
@@ -44,6 +45,7 @@ export default function App() {
     setSub: (t) => setSub(t || ''),
     setBack: (fn) => setBack(fn ? { fn } : null),
     setHint: (t) => setHint(t || ''),
+    setNotice: (t) => setNotice(t || ''),
     showPost: (post, opts) => setCard({ post, onClose: opts?.onClose }),
     hidePost: () => setCard(null),
   }), []);
@@ -74,7 +76,7 @@ export default function App() {
       />
       <Hint text={hint} />
       {data && <PostCard post={card?.post ?? null} cats={data.cats} onClose={closeCard} />}
-      <Notice text={error} />
+      <Notice text={error || notice} />
     </>
   );
 }

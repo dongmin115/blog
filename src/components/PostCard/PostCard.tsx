@@ -22,13 +22,17 @@ export default function PostCard({ post, cats, onClose }: Props) {
   return (
     <div className={`card${post ? ' open' : ''}`} aria-hidden={!post}>
       {p && c && (
-        <div className="sheet">
+        // 카드 아무 데나 눌러도 글 페이지로 가요(제목은 진짜 링크라 키보드/스크린리더도 열 수 있어요). 버튼과 링크 자체는 제외해요.
+        <div
+          className="sheet"
+          onClick={(e) => { if (!(e.target as HTMLElement).closest('a,button')) location.assign(p.url); }}
+        >
           <div className="meta">
             <span className="chip" style={{ color: `hsl(${c.h},${c.s}%,72%)` }}>{c.name}</span>
             <span>{p.y !== new Date().getFullYear() ? `${p.y}년 ` : ''}{p.m}월 {p.d}일</span>
             <span>· {p.minutes}분</span>
           </div>
-          <h2>{p.title}</h2>
+          <h2><a href={p.url}>{p.title}</a></h2>
           <div className="body">
             <p>{p.excerpt}</p>
             {p.photo && <img src={p.photo} alt="" />}
@@ -39,7 +43,6 @@ export default function PostCard({ post, cats, onClose }: Props) {
               <button type="button" className={`like${on ? ' on' : ''}`} onClick={() => toggle(p.id)}>
                 {on ? '♥' : '♡'} {n || ''}
               </button>
-              <a className="btn" href={p.url}>전체 읽기</a>
               <button type="button" className="btn" onClick={onClose}>닫기</button>
             </div>
           </div>

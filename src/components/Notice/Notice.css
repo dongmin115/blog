@@ -1,1 +1,4 @@
 .notice { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; line-height: 1.7; color: var(--mut); z-index: 3; pointer-events: none; }
+.notice span { max-width: 18em; font-family: var(--f-d); font-size: 16px; text-wrap: balance; text-shadow: 0 1px 10px rgba(0,0,0,0.85); animation: notice-in .8s ease both; }
+@keyframes notice-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .notice span { animation: none; } }

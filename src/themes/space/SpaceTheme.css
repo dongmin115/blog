@@ -5,3 +5,11 @@
 .lab small { display: block; font-family: var(--f-b); font-weight: 400; font-size: 11px; color: var(--mut); margin-top: 1px; }
 .lab.on { opacity: 1; }
 .lab.dim { opacity: 0.5; }
+.lab.year { font-size: 14px; color: var(--mut); letter-spacing: 0.06em; }
+.lab.year small { font-size: 10.5px; }
+.lab.year.hub { color: #ece6d2; font-size: 15px; }
+.lab.year.hub small { color: #b9bcd0; }
+.lab.year.quiet { color: #7e86a2; }
+.lab.year.quiet small { color: #6f7893; }
+.space-fade { position: absolute; inset: 0; background: #02030a; opacity: 0; pointer-events: none; transition: opacity .24s ease; }
+@media (prefers-reduced-motion: reduce) { .space-fade { transition: none; } }

@@ -16,7 +16,7 @@ export default function ListTheme({ data, ui }: ThemeProps) {
             <section key={c.name}>
               <h3 style={{ color: `hsl(${c.h},${c.s}%,72%)` }}>
                 {c.name}
-                <small>{c.sub} · 글 {posts.length}편</small>
+                <small>글 {posts.length}편</small>
               </h3>
               {posts.map((p) => (
                 <a key={p.id} className="item" href={p.url}>

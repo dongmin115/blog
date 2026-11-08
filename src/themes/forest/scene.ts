@@ -5,6 +5,7 @@
 // - 아래로 끌면 앞으로 나아가요(invertY). 길과 물을 따로 그리지 않고, 점선/스포트라이트 빛도 쓰지 않아요.
 import type { BlogData, Post } from '../../data/types';
 import type { ThemeUI } from '../types';
+import { seasonHsl as hslOf } from '../season';
 
 interface Host { el: HTMLElement; data: BlogData; ui: ThemeUI; reduce: boolean }
 type Sprite = HTMLCanvasElement;
@@ -32,21 +33,6 @@ function mix(f: number) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 const easeBack = (x: number) => { const c1 = 1.7, c3 = 2.7; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
-
-// 월(+일)에 따라 반딧불 색이 계절처럼 바뀌어요: 봄 연분홍 → 초록 → 가을 호박색 → 겨울 푸른 흰빛 → 다시 봄.
-// [월(1.0=1월 1일), 색조, 채도, 밝기]. 마지막 줄은 첫 줄과 같아서 한 해가 이어져요. 색조는 가까운 쪽으로 돌아가며 섞여요.
-const STOPS = [[1, 210, 40, 72], [2, 200, 44, 70], [3, 10, 55, 66], [4, 70, 45, 60], [5.5, 120, 40, 50], [8, 150, 34, 38], [9.5, 55, 48, 50], [10.5, 28, 62, 52], [11.3, 10, 62, 48], [12, 340, 40, 62], [13, 210, 40, 72]];
-function hslOf(mf: number) {
-  mf = clamp(mf, 1, 12.999);
-  for (let i = 1; i < STOPS.length; i++) {
-    if (mf <= STOPS[i][0]) {
-      const a = STOPS[i - 1], b = STOPS[i], k = (mf - a[0]) / (b[0] - a[0]);
-      let dh = b[1] - a[1]; if (dh > 180) dh -= 360; else if (dh < -180) dh += 360;
-      return [(a[1] + dh * k + 360) % 360, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k];
-    }
-  }
-  return [210, 40, 72];
-}
 
 export async function mountForest({ el, data, ui, reduce }: Host) {
   const CATS = data.cats, POSTS = data.posts, inCat = data.inCat;
@@ -97,6 +83,13 @@ export async function mountForest({ el, data, ui, reduce }: Host) {
   function label(txt: string, x: number, y: number, font: string, color: string, alpha = 1) {
     g2.font = font; g2.textAlign = 'center'; g2.textBaseline = 'top';
     g2.globalAlpha = alpha; g2.fillStyle = color; g2.fillText(txt, x, y); g2.globalAlpha = 1;
+  }
+  // 글자가 maxW보다 길면 뒤를 줄임표로 잘라요.
+  function fitText(txt: string, font: string, maxW: number) {
+    g2.font = font;
+    if (g2.measureText(txt).width <= maxW) return txt;
+    let t = txt; while (t.length > 1 && g2.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
   }
   function ringAt(x: number, y: number, r: number, t: number) {
     const ph = reduce ? 0 : (t * 12) % 14;
@@ -381,12 +374,19 @@ export async function mountForest({ el, data, ui, reduce }: Host) {
         g2.globalCompositeOperation = 'source-over'; g2.globalAlpha = 1;
       }
     }
-    // 반딧불 아래 날짜 라벨
+    // 반딧불 아래 제목(길면 줄임표) + 그 밑에 작게 날짜
     for (const o of items) {
       if (o.t !== 'post' || o.zr <= 40 || o.zr >= FAR) continue;
-      const s = F / o.zr;
-      const la = clamp((FAR - o.zr) / 260, 0, 1) * clamp((o.zr - 50) / 80, 0, 1);
-      label(`${o.p.y !== thisYear ? `${String(o.p.y).slice(2)}.` : ''}${o.p.m}.${o.p.d}${o.p.photo ? ' ◆' : ''}`, o.sx, o.sy + clamp(22 * s, 14, 36), F_B, o.idx === sel ? '#ffd98a' : '#cfe3d8', (o.idx === sel ? 1 : 0.8) * la);
+      const s = F / o.zr, near = clamp((s - 0.45) / 0.85, 0, 1);
+      const la = clamp((FAR - o.zr) / 260, 0, 1) * clamp((o.zr - 50) / 80, 0, 1), on = o.idx === sel;
+      const fs = 11.5 + 3.5 * near, y0 = o.sy + clamp(22 * s, 16, 38), a0 = (on ? 1 : 0.88) * la;
+      const title = fitText(o.p.title, `700 ${fs}px "Gowun Batang","Noto Serif KR",serif`, Math.min(vw * 0.62, 230));
+      g2.font = `700 ${fs}px "Gowun Batang","Noto Serif KR",serif`; g2.textAlign = 'center'; g2.textBaseline = 'top';
+      const tw = g2.measureText(title).width, lx = clamp(o.sx, tw / 2 + 10, vw - tw / 2 - 10); // 화면 가장자리에서도 글자가 잘리지 않게
+      g2.globalAlpha = a0 * 0.7; g2.fillStyle = '#02080d'; g2.fillText(title, lx + 0.8, y0 + 1.2); // 어두운 나무 위에서도 읽히게 살짝 그림자
+      g2.globalAlpha = a0; g2.fillStyle = on ? '#ffd98a' : '#e4efe2'; g2.fillText(title, lx, y0); g2.globalAlpha = 1;
+      const yy = o.p.y !== thisYear ? `${o.p.y}.` : '';
+      label(`${yy}${o.p.m}.${o.p.d}${o.p.photo ? ' ◆' : ''}`, lx, y0 + fs + 4, F_B, on ? '#ffd98a' : '#9fb8b0', a0 * 0.85);
     }
     boat(t, spd * 6);
     // 오른쪽 깊이 표시
@@ -411,7 +411,9 @@ export async function mountForest({ el, data, ui, reduce }: Host) {
   function chrome() {
     ui.setSub(cat < 0 ? `전체 + 카테고리 ${CATS.length}개 · 글 ${POSTS.length}편` : `${VIEWS[cat].name} · 글 ${VIS.length}편`);
     ui.setBack(cat < 0 ? null : () => goCat(-1));
-    ui.setHint(cat < 0 ? '아래로 끌어 안쪽으로 들어가며 이정표를 눌러 보세요' : '아래로 끌어 숲 안쪽으로 노를 저어 반딧불을 찾아보세요');
+    const empty = cat >= 0 && VIS.length === 0;
+    ui.setNotice(empty ? (cat === 0 ? '아직 이 숲에는 반딧불이 찾아오지 않았어요' : `아직 ${VIEWS[cat].name} 숲에는 반딧불이 찾아오지 않았어요`) : '');
+    ui.setHint(empty ? '' : cat < 0 ? '아래로 끌어 안쪽으로 들어가며 이정표를 눌러 보세요' : '아래로 끌어 숲 안쪽으로 노를 저어 반딧불을 찾아보세요');
     hintShown = true;
   }
   function hideHint() { if (hintShown) { hintShown = false; ui.setHint(''); } }
@@ -555,7 +557,7 @@ export async function mountForest({ el, data, ui, reduce }: Host) {
     destroy() {
       dead = true; cancelAnimationFrame(raf); clearTimeout(rz);
       cleanups.forEach((f) => f());
-      ui.hidePost(); cv.remove();
+      ui.setNotice(''); ui.hidePost(); cv.remove();
     },
   };
 }

@@ -6,6 +6,8 @@ export interface ThemeUI {
   setSub(text?: string): void;
   setBack(fn?: (() => void) | null): void;
   setHint(text?: string): void;
+  /** 화면 가운데에 띄우는 안내 문구(예: 글이 없는 카테고리). 빈 문자열이면 사라져요. */
+  setNotice(text?: string): void;
   showPost(post: Post, opts?: { onClose?: () => void }): void;
   hidePost(): void;
 }
