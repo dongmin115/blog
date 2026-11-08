@@ -1,0 +1,437 @@
+<title>일기장 3D 테마</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #03040c; --fg: #ece8da; --mut: #a9aec6; --line: rgba(190,200,240,0.22);
+    --glass: rgba(10,13,30,0.72); --accent: #ffd98a;
+    --f-d: "Gowun Batang","Noto Serif KR",serif; --f-b: "Gowun Dodum","Noto Sans KR",system-ui,sans-serif;
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--f-b); overflow: hidden; overscroll-behavior: none; }
+  #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .labs { position: absolute; inset: 0; }
+  .lab { position: absolute; left: 0; top: 0; white-space: nowrap; text-align: center; font-family: var(--f-d); font-size: 15px; font-weight: 700; color: var(--fg); text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9); opacity: 0; transition: opacity .35s; will-change: transform; }
+  .lab small { display: block; font-family: var(--f-b); font-weight: 400; font-size: 11px; color: var(--mut); margin-top: 1px; }
+  .lab.on { opacity: 1; }
+  .lab.dim { opacity: 0.5; }
+  .top { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 12px) max(16px, env(safe-area-inset-left, 0px)) 0 max(16px, env(safe-area-inset-right, 0px)); pointer-events: none; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .brand { min-width: 0; }
+  .brand b { display: block; font-family: var(--f-d); font-size: 21px; letter-spacing: -0.01em; }
+  .brand span { display: block; margin-top: 3px; font-size: 13px; color: var(--mut); }
+  .btn { pointer-events: auto; border: 1px solid var(--line); background: var(--glass); color: var(--fg); font: 14px var(--f-b); border-radius: 999px; padding: 9px 16px; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); text-decoration: none; text-align: center; }
+  .btn[hidden] { display: none; }
+  .tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .tabs .btn { padding: 9px 4px; font-size: 14px; white-space: nowrap; }
+  .tabs .btn.on { border-color: var(--accent); color: var(--accent); background: rgba(40,34,20,0.78); }
+  .hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); text-align: center; padding: 0 max(16px, env(safe-area-inset-left, 0px)); font-size: 13px; color: var(--mut); pointer-events: none; transition: opacity .3s; text-shadow: 0 1px 6px #000; }
+  .hint.off { opacity: 0; }
+  .card { position: fixed; left: 0; right: 0; bottom: 0; transform: translateY(105%); transition: transform .45s cubic-bezier(.2,.8,.2,1); padding: 0 max(12px, env(safe-area-inset-left, 0px)) calc(env(safe-area-inset-bottom, 0px) + 12px) max(12px, env(safe-area-inset-right, 0px)); pointer-events: none; }
+  .card.open { transform: none; }
+  .sheet { pointer-events: auto; max-width: 560px; margin: 0 auto; background: var(--glass); border: 1px solid var(--line); border-radius: 20px; padding: 16px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); display: grid; gap: 10px; }
+  .meta { font-size: 12px; color: var(--mut); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chip { padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
+  .sheet h2 { margin: 0; font-family: var(--f-d); font-size: 20px; line-height: 1.3; text-wrap: balance; }
+  .body { display: flex; gap: 12px; min-width: 0; }
+  .body p { margin: 0; font-size: 14px; line-height: 1.65; color: #d4d6e4; min-width: 0; flex: 1; }
+  #photo { width: 92px; height: 69px; border-radius: 8px; flex: none; border: 1px solid var(--line); }
+  #photo[hidden] { display: none; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .stats { font-size: 13px; color: var(--mut); }
+  .like { border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 999px; padding: 7px 14px; font: 14px var(--f-b); cursor: pointer; }
+  .like.on { color: #ff9ab4; border-color: #ff9ab4; }
+  .nogl { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; line-height: 1.7; color: var(--mut); }
+  .nogl[hidden] { display: none; }
+</style>
+<canvas id="gl"></canvas>
+<div id="labels"></div>
+<div class="top">
+  <div class="head">
+    <div class="brand"><b>일기장 테마 시안</b><span id="sub"></span></div>
+    <button class="btn" id="back" hidden>‹ 전체</button>
+  </div>
+  <div class="tabs">
+    <button class="btn on" data-t="space">우주</button>
+    <a class="btn" id="forest" href="https://claude.ai/artifact/DRgUMSu4aqhCRwGGQvyBgs#forest" target="_blank" rel="noopener">반딧불 숲 ↗</a>
+  </div>
+</div>
+<div class="hint" id="hint"></div>
+<div class="card" id="card">
+  <div class="sheet">
+    <div class="meta"><span class="chip" id="mcat"></span><span id="mdate"></span><span id="mread"></span></div>
+    <h2 id="mtitle"></h2>
+    <div class="body"><p id="mtext"></p><canvas id="photo" width="184" height="138" hidden></canvas></div>
+    <div class="row">
+      <div class="stats"><span id="mviews"></span></div>
+      <div style="display:flex;gap:8px"><button class="like" id="mlike">♡ 0</button><button class="btn" id="mclose">닫기</button></div>
+    </div>
+  </div>
+</div>
+<div class="nogl" id="nogl" hidden><span id="noglmsg">이 기기에서는 WebGL을 쓸 수 없어요.</span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var CATS = [
+    { name: '개발', sub: '코드와 화면', h: 205, s: 75 },
+    { name: '일상', sub: '지나간 하루', h: 35, s: 88 },
+    { name: '몸과 마음', sub: '달리기와 쉼', h: 150, s: 58 },
+    { name: '기록', sub: '메모와 다짐', h: 320, s: 62 }
+  ];
+  var POSTS = [
+    { c: 3, m: 3, d: 2, t: '첫 문장은 늘 어렵다', x: '블로그를 열기로 했다. 아무도 읽지 않아도 되는 글을 쓰려고. 이 기록의 첫 불빛이다.', r: 2, v: 34, l: 3 },
+    { c: 1, m: 3, d: 28, t: '벚꽃보다 야근', x: '꽃이 피는 줄도 모르고 배포 일정만 봤다. 창밖이 환해서 뒤늦게 알았다.', r: 3, v: 88, l: 12, photo: 'blossom' },
+    { c: 0, m: 5, d: 10, t: '소수점 둘째 자리의 책임감', x: '숫자 하나가 틀리면 누군가의 하루가 달라진다. 화면에 찍히는 숫자를 조금 더 조심스럽게 다루기로 했다.', r: 4, v: 52, l: 5 },
+    { c: 0, m: 6, d: 21, t: '비 오는 날의 커밋 로그', x: '장마 첫날, 커밋 메시지에 날씨를 적어 봤다. 나중에 읽으면 그날의 기분이 보일 것 같다.', r: 3, v: 41, l: 4 },
+    { c: 2, m: 7, d: 30, t: '노트북 없이 보낸 사흘', x: '바다를 보면서도 자꾸 코드가 떠올랐다. 사흘째 되는 날에야 머릿속이 조용해졌다.', r: 3, v: 120, l: 18, photo: 'sea' },
+    { c: 0, m: 8, d: 17, t: '리렌더링과 화해하기', x: '며칠을 싸운 끝에 원인은 내가 만든 객체 하나였다. 이긴 기분보다 머쓱함이 먼저 왔다.', r: 5, v: 67, l: 6 },
+    { c: 2, m: 9, d: 14, t: '새벽 러닝 3주차', x: '숨이 덜 차기 시작했다. 어제의 나보다 조금만 더 멀리 가는 것으로 충분하다.', r: 2, v: 29, l: 2 },
+    { c: 1, m: 10, d: 9, t: '오랜만에 손글씨', x: '펜을 잡았더니 내 글씨가 낯설었다. 느리게 쓰니 생각도 느리게 정리됐다.', r: 2, v: 38, l: 4 },
+    { c: 1, m: 10, d: 31, t: '가을이 끝나기 전에', x: '은행잎이 노랗게 쌓인 길을 일부러 돌아서 걸었다. 이번 달에는 사진보다 기억에 남기기로 했다.', r: 3, v: 95, l: 14, photo: 'autumn' },
+    { c: 3, m: 11, d: 7, t: '어제의 나에게 남기는 메모', x: '잘한 일 하나, 아쉬운 일 하나만 적는다. 이 기록이 조금씩 자라는 방식이다.', r: 2, v: 76, l: 9, photo: 'night' }
+  ];
+  POSTS.forEach(function (p, i) { p.id = i; });
+  function inCat(c) { return POSTS.filter(function (p) { return p.c === c; }); }
+  function warmOf(p) { return Math.min(1, p.l / 18); }
+
+  var $ = function (id) { return document.getElementById(id); };
+  function fail(msg) { $('noglmsg').textContent = msg; $('nogl').hidden = false; }
+  if (typeof THREE === 'undefined') { fail('3D 라이브러리를 불러오지 못했어요.'); return; }
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches, RK = reduce ? 0 : 1;
+  var liked = {};
+  try { liked = JSON.parse(localStorage.getItem('sp3d-liked') || '{}') || {}; } catch (e) { liked = {}; }
+
+  var cv = $('gl'), renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' }); }
+  catch (e) { fail('이 기기에서는 WebGL을 쓸 수 없어요.'); return; }
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(DPR);
+  var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+  var W = 1, H = 1, aspect = 1;
+
+  /* ---------- helpers ---------- */
+  function col(h, s, l) { return new THREE.Color().setHSL(h / 360, s / 100, l / 100); }
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+  function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function radialTex(size, stops) {
+    var c = document.createElement('canvas'); c.width = c.height = size; var g = c.getContext('2d'), h = size / 2;
+    var gr = g.createRadialGradient(h, h, 0, h, h, h); stops.forEach(function (s) { gr.addColorStop(s[0], s[1]); });
+    g.fillStyle = gr; g.fillRect(0, 0, size, size); return new THREE.CanvasTexture(c);
+  }
+  var GLOW = radialTex(128, [[0, 'rgba(255,255,255,1)'], [0.18, 'rgba(255,255,255,0.55)'], [0.5, 'rgba(255,255,255,0.12)'], [1, 'rgba(255,255,255,0)']]);
+  var DOT = radialTex(32, [[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,0.8)'], [1, 'rgba(255,255,255,0)']]);
+  var CROSS = (function () {
+    var c = document.createElement('canvas'); c.width = c.height = 128; var g = c.getContext('2d'), i;
+    for (i = 0; i < 2; i++) {
+      var gr = i ? g.createLinearGradient(64, 0, 64, 128) : g.createLinearGradient(0, 64, 128, 64);
+      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; if (i) g.fillRect(62, 0, 4, 128); else g.fillRect(0, 62, 128, 4);
+    }
+    return new THREE.CanvasTexture(c);
+  })();
+  function paintPhoto(kind, w, h) {
+    var c = document.createElement('canvas'); c.width = w; c.height = h; var g = c.getContext('2d'), i, gr, R;
+    if (kind === 'blossom') {
+      gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#f6c7d4'); gr.addColorStop(1, '#8a5a74'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      R = mulberry(5); for (i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,' + (200 + R() * 40 | 0) + ',' + (215 + R() * 30 | 0) + ',' + (0.4 + R() * 0.5) + ')'; g.beginPath(); g.arc(R() * w, R() * h * 0.8, 4 + R() * 14, 0, 6.28); g.fill(); }
+      g.fillStyle = '#2b2233'; g.fillRect(0, h * 0.86, w, h * 0.14);
+    } else if (kind === 'sea') {
+      gr = g.createLinearGradient(0, 0, 0, h * 0.6); gr.addColorStop(0, '#ffcf9a'); gr.addColorStop(1, '#6aa6c8'); g.fillStyle = gr; g.fillRect(0, 0, w, h * 0.6);
+      gr = g.createLinearGradient(0, h * 0.6, 0, h); gr.addColorStop(0, '#2a6a8f'); gr.addColorStop(1, '#0c2a42'); g.fillStyle = gr; g.fillRect(0, h * 0.6, w, h * 0.4);
+      g.fillStyle = '#fff2c9'; g.beginPath(); g.arc(w * 0.68, h * 0.52, h * 0.1, 0, 6.28); g.fill();
+      g.strokeStyle = 'rgba(255,240,200,0.5)'; g.lineWidth = 2; for (i = 0; i < 6; i++) { g.beginPath(); g.moveTo(w * 0.6, h * (0.64 + i * 0.05)); g.lineTo(w * 0.76, h * (0.64 + i * 0.05)); g.stroke(); }
+    } else if (kind === 'autumn') {
+      gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#f0b66a'); gr.addColorStop(1, '#6a3a1c'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      R = mulberry(9); for (i = 0; i < 70; i++) { g.fillStyle = 'hsla(' + (30 + R() * 25 | 0) + ',85%,' + (45 + R() * 20 | 0) + '%,0.85)'; g.beginPath(); var x = R() * w, y = h * 0.3 + R() * h * 0.7; g.moveTo(x, y); g.lineTo(x + 9, y + 5); g.lineTo(x + 2, y + 14); g.closePath(); g.fill(); }
+    } else {
+      gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0a1230'); gr.addColorStop(1, '#2a3a6a'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      R = mulberry(3); g.fillStyle = '#fff'; for (i = 0; i < 70; i++) { g.globalAlpha = 0.3 + R() * 0.7; g.fillRect(R() * w, R() * h * 0.8, 1.6, 1.6); } g.globalAlpha = 1;
+      g.fillStyle = '#f4efd2'; g.beginPath(); g.arc(w * 0.72, h * 0.28, h * 0.1, 0, 6.28); g.fill();
+      g.fillStyle = '#070a18'; g.beginPath(); g.moveTo(0, h); g.lineTo(0, h * 0.78); g.lineTo(w * 0.3, h * 0.66); g.lineTo(w * 0.6, h * 0.8); g.lineTo(w, h * 0.7); g.lineTo(w, h); g.fill();
+    }
+    return c;
+  }
+  var photoTexCache = {};
+  function photoTex(kind) { if (!photoTexCache[kind]) photoTexCache[kind] = new THREE.CanvasTexture(paintPhoto(kind, 256, 192)); return photoTexCache[kind]; }
+  function planetCanvas(h, s, seed) {
+    var c = document.createElement('canvas'); c.width = 256; c.height = 128; var g = c.getContext('2d'), R = mulberry(seed * 77 + 1), y, i;
+    for (y = 0; y < 128; y += 3) {
+      var l = 36 + 13 * Math.sin(y * 0.09 + seed) + R() * 7;
+      g.fillStyle = 'hsl(' + (h + Math.sin(y * 0.05 + seed) * 16) + ',' + (s * 0.8) + '%,' + l + '%)'; g.fillRect(0, y, 256, 3);
+    }
+    for (i = 0; i < 22; i++) { g.fillStyle = R() < 0.5 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.14)'; g.beginPath(); g.ellipse(R() * 256, R() * 128, 8 + R() * 26, 3 + R() * 9, 0, 0, 6.28); g.fill(); }
+    return c;
+  }
+  function glowSprite(color, op, size) {
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: color, transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    sp.scale.set(size, size, 1); return sp;
+  }
+  function invisible(geo) { return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); }
+  function makeStarfield(scene, seed, n, hueBase) {
+    var grp = new THREE.Group(), pos = new Float32Array(n * 3), cl = new Float32Array(n * 3), R = mulberry(seed), i, c = new THREE.Color();
+    for (i = 0; i < n; i++) {
+      var u = R() * 2 - 1, th = R() * 6.2832, rr = 90 + R() * 150, sq = Math.sqrt(1 - u * u);
+      pos[i * 3] = Math.cos(th) * sq * rr; pos[i * 3 + 1] = u * rr; pos[i * 3 + 2] = Math.sin(th) * sq * rr;
+      c.setHSL(hueBase + R() * 0.2, 0.3 + R() * 0.4, 0.55 + R() * 0.4); var b = 0.35 + R() * 0.65;
+      cl[i * 3] = c.r * b; cl[i * 3 + 1] = c.g * b; cl[i * 3 + 2] = c.b * b;
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(cl, 3));
+    grp.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.5, map: DOT, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })));
+    var hues = [215, 280, 190, 330, 240], k;
+    for (k = 0; k < 5; k++) {
+      var a = k * 1.9 + 0.5, sp = glowSprite(col(hues[k], 70, 45), 0.15, 140); sp.scale.set(140, 90, 1);
+      sp.position.set(Math.cos(a) * 120, (k - 2) * 22, Math.sin(a) * 120); grp.add(sp);
+    }
+    scene.add(grp); return grp;
+  }
+
+  /* ---------- labels ---------- */
+  var labBox = $('labels');
+  function newLabLayer() { var d = document.createElement('div'); d.className = 'labs'; d.style.display = 'none'; labBox.appendChild(d); return d; }
+  function mkLab(layer, html) { var d = document.createElement('div'); d.className = 'lab'; d.innerHTML = html; layer.appendChild(d); return d; }
+  var v3b = new THREE.Vector3();
+  function place(el, wp, on, dim) {
+    v3b.copy(wp).project(camera);
+    if (!(on && v3b.z < 1 && v3b.z > -1)) { el.classList.remove('on'); el.classList.remove('dim'); return; }
+    el.style.transform = 'translate(' + ((v3b.x * 0.5 + 0.5) * W).toFixed(1) + 'px,' + ((-v3b.y * 0.5 + 0.5) * H + 6).toFixed(1) + 'px) translateX(-50%)';
+    el.classList.add('on'); el.classList.toggle('dim', !!dim);
+  }
+
+  /* ================= THEME: 별자리 ================= */
+  function CosmosTheme() {
+    var scene = new THREE.Scene(); scene.background = new THREE.Color(0x02030a);
+    var sky = makeStarfield(scene, 23, 2600, 0.58);
+    scene.add(new THREE.AmbientLight(0x6070a0, 0.5));
+    var key = new THREE.PointLight(0xfff0d8, 0, 30, 1.2); scene.add(key);
+    var layer = newLabLayer(), cons = [], nodes = [];
+    var LAY2 = [[-5.5, 5.5, 1.5], [5.5, 3.2, -2.5], [-5, -4.5, -2], [5.2, -5.8, 2.5]];
+    CATS.forEach(function (c, k) {
+      var g = new THREE.Group(); g.position.set(LAY2[k][0], LAY2[k][1], LAY2[k][2]); scene.add(g);
+      var posts = inCat(k), n = posts.length, R = mulberry(k * 31 + 7), pts = [], i;
+      var co = { g: g, k: k, nd: [], lineMat: null, decor: null };
+      co.cg = glowSprite(col(c.h, c.s, 58), 0.5, 6.5); g.add(co.cg);
+      posts.forEach(function (p, ix) {
+        var lp = new THREE.Vector3((ix - (n - 1) / 2) * 2.2 + (R() - 0.5) * 0.6, Math.sin(ix * 1.7 + k) * 1.1, Math.cos(ix * 1.3 + k) * 1.3);
+        var warm = warmOf(p), size = 1.7 + warm * 1.2;
+        var glow = glowSprite(col(c.h, c.s, 62), 0.9, size); glow.position.copy(lp); g.add(glow);
+        var core = glowSprite(0xffffff, 1, size * 0.34); core.position.copy(lp); g.add(core);
+        var cr = new THREE.Sprite(new THREE.SpriteMaterial({ map: CROSS, color: col(c.h, c.s * 0.6, 82), transparent: true, opacity: p.photo ? 0.9 : 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+        cr.scale.set(size * 1.9, size * 1.9, 1); cr.position.copy(lp); g.add(cr);
+        var photo = null;
+        if (p.photo) {
+          photo = new THREE.Sprite(new THREE.SpriteMaterial({ map: photoTex(p.photo), transparent: true, opacity: 0, fog: false }));
+          photo.scale.set(1.5, 1.12, 1); photo.position.set(lp.x + 1.15, lp.y - 0.95, lp.z + 0.1); g.add(photo);
+        }
+        var pr = invisible(new THREE.SphereGeometry(1.15, 8, 6)); pr.position.copy(lp); pr.userData = { type: 'post', idx: p.id }; g.add(pr);
+        var prad = 0.75 + warm * 0.35;
+        var pmesh = new THREE.Mesh(new THREE.SphereGeometry(1, 36, 24), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(p.photo ? paintPhoto(p.photo, 256, 128) : planetCanvas(c.h, c.s, p.id + 1)), roughness: 0.92, metalness: 0, emissive: col(c.h, c.s, 22), emissiveIntensity: 0.3 }));
+        pmesh.position.copy(lp); pmesh.scale.setScalar(0.001); pmesh.visible = false; g.add(pmesh);
+        if (p.photo) {
+          var rg = new THREE.Mesh(new THREE.RingGeometry(1.45, 2.0, 48), new THREE.MeshBasicMaterial({ color: col(c.h, c.s * 0.7, 78), transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
+          rg.rotation.x = 1.25; pmesh.add(rg);
+        }
+        var nd = { p: p, lp: lp, glow: glow, core: core, cr: cr, photo: photo, proxy: pr, size: size, ph: R() * 6, cat: k, pmesh: pmesh, prad: prad, ps: 0 };
+        co.nd.push(nd); nodes[p.id] = nd; pts.push({ v: lp, post: true });
+      });
+      var nd2 = 6 + (k % 3), dpos = new Float32Array(nd2 * 3);
+      for (i = 0; i < nd2; i++) {
+        var dv = new THREE.Vector3((R() - 0.5) * 8.4, (R() - 0.5) * 5, (R() - 0.5) * 4);
+        dpos[i * 3] = dv.x; dpos[i * 3 + 1] = dv.y; dpos[i * 3 + 2] = dv.z; pts.push({ v: dv, post: false });
+      }
+      var dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dpos, 3));
+      co.decor = new THREE.Points(dg, new THREE.PointsMaterial({ size: 0.55, map: DOT, color: col(c.h, c.s * 0.5, 80), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); g.add(co.decor);
+      pts.sort(function (a, b) { return a.v.x - b.v.x; });
+      var seg = [], j; for (j = 0; j < pts.length - 1; j++) seg.push(pts[j].v, pts[j + 1].v);
+      for (j = 0; j < 2 && pts.length > 4; j++) { var a = pts[Math.floor(R() * pts.length)], b = pts[Math.floor(R() * pts.length)]; if (a !== b) seg.push(a.v, b.v); }
+      co.lineMat = new THREE.LineBasicMaterial({ color: col(c.h, c.s * 0.8, 70), transparent: true, opacity: 0.4, depthWrite: false, fog: false });
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(seg), co.lineMat));
+      var proxy = invisible(new THREE.SphereGeometry(4.4, 8, 6)); proxy.userData = { type: 'cat', idx: k }; g.add(proxy); co.proxy = proxy;
+      co.lab = mkLab(layer, c.name + '<small>' + c.sub + ' · 글 ' + n + '편</small>');
+      co.op = 0.4; cons.push(co);
+    });
+    POSTS.forEach(function (p) { nodes[p.id].lab = mkLab(layer, p.t + '<small>' + p.m + '.' + p.d + (p.photo ? ' ◆' : '') + '</small>'); });
+    var wp = new THREE.Vector3(), kp = new THREE.Vector3(), state = { mode: 'over', cat: -1, sel: -1 };
+    return {
+      scene: scene, layer: layer, yaw0: 0.22, lim: { yaw: [-1.4, 1.4], pitch: [-0.45, 0.9] }, spin: { over: 0, cat: 0 }, sway: 0.05,
+      hint: { over: '별자리를 눌러 들어가 보세요 · 끌어서 돌려 보기', cat: '별을 눌러 다가가 글을 읽어 보세요 · 끌어서 돌려 보기' },
+      sub: '우주 · 별자리와 행성',
+      focus: function (mode, cat, sel, out) {
+        state.mode = mode; state.cat = cat; state.sel = sel;
+        if (mode === 'over') { out.set(0, 0, 0); return { r: Math.max(26, 10.2 / (0.4663 * Math.min(aspect, 1.1))), pitch: 0.12 }; }
+        if (mode === 'cat') { cons[cat].g.getWorldPosition(out); return { r: Math.max(10, 5.2 / (0.4663 * Math.min(aspect, 1.3))), pitch: 0.1 }; }
+        nodes[sel].glow.getWorldPosition(out); return { r: 4.4, pitch: 0.1 };
+      },
+      update: function (dt, t) {
+        var k, i;
+        for (k = 0; k < cons.length; k++) {
+          var co = cons[k], want = state.mode === 'over' ? 0.4 : (k === state.cat ? 0.7 : 0.1);
+          co.op += (want - co.op) * (1 - Math.exp(-dt * 3)); co.lineMat.opacity = co.op * (reduce ? 1 : 0.88 + 0.12 * Math.sin(t * 1.3 + k));
+          co.decor.material.opacity = state.mode === 'over' ? 0.8 : (k === state.cat ? 0.9 : 0.25);
+          co.cg.material.opacity = state.mode === 'over' ? 0.5 : (k === state.cat ? 0.22 : 0.1);
+          for (i = 0; i < co.nd.length; i++) {
+            var nd = co.nd[i], tw = reduce ? 1 : 1 + 0.12 * Math.sin(t * 1.8 + nd.ph), dimF = (state.mode === 'over' || k === state.cat) ? 1 : 0.3;
+            nd.glow.scale.set(nd.size * tw * (nd.p.id === state.sel ? 1.5 : 1), nd.size * tw * (nd.p.id === state.sel ? 1.5 : 1), 1);
+            var wantP = (state.mode === 'post' && nd.p.id === state.sel) ? nd.prad : 0.001;
+            nd.ps += (wantP - nd.ps) * (1 - Math.exp(-dt * 3)); var pf = clamp(nd.ps / nd.prad, 0, 1);
+            nd.pmesh.visible = nd.ps > 0.03; nd.pmesh.scale.setScalar(Math.max(0.001, nd.ps)); nd.pmesh.rotation.y += dt * 0.3 * RK;
+            nd.glow.material.opacity = 0.9 * dimF * (1 - 0.8 * pf); nd.core.material.opacity = dimF * (1 - pf); nd.cr.material.opacity = (nd.p.photo ? 0.9 : 0) * (1 - pf);
+            if (nd.photo) { var pw = (state.mode === 'cat' && k === state.cat) ? 1 : 0; nd.photo.material.opacity += (pw - nd.photo.material.opacity) * (1 - Math.exp(-dt * 4)); }
+          }
+        }
+        var wk = (state.mode === 'post' && nodes[state.sel]) ? 2.6 : 0;
+        if (wk) { nodes[state.sel].glow.getWorldPosition(kp); key.position.set(kp.x + 1.6, kp.y + 1.4, kp.z + 2.4); }
+        key.intensity += (wk - key.intensity) * (1 - Math.exp(-dt * 3));
+        sky.rotation.y += dt * 0.003 * RK; scene.updateMatrixWorld(true);
+      },
+      pickList: function (mode, cat) {
+        if (mode === 'over') return cons.map(function (c) { return c.proxy; });
+        return cons[cat].nd.map(function (n) { return n.proxy; });
+      },
+      labels: function (mode, cat, sel) {
+        var k, i;
+        for (k = 0; k < cons.length; k++) { cons[k].g.getWorldPosition(wp); wp.y -= 3.6; place(cons[k].lab, wp, mode === 'over'); }
+        for (i = 0; i < POSTS.length; i++) {
+          var nd = nodes[i], vis = mode !== 'over' && nd.cat === cat;
+          nd.glow.getWorldPosition(wp); wp.y -= nd.size * 0.7; place(nd.lab, wp, vis, mode === 'post' && i !== sel);
+        }
+      }
+    };
+  }
+
+  /* ================= core ================= */
+  var builders = { space: CosmosTheme }, built = {}, theme = null, themeName = '';
+  var mode = 'over', cat = -1, sel = -1;
+  var yaw = 0.4, pitch = 0.78, vyaw = 0, vpitch = 0, zoom = 1, flyT = 0;
+  var target = new THREE.Vector3(), tgtT = new THREE.Vector3(), R = 60, tgtR = 60, tgtPitch = 0.78;
+
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight; aspect = W / H;
+    renderer.setSize(W, H, false); camera.aspect = aspect;
+    camera.setViewOffset(W, H, 0, -34, W, H); camera.updateProjectionMatrix();
+  }
+  function setHint() { var h = $('hint'); h.textContent = mode === 'over' ? theme.hint.over : mode === 'cat' ? theme.hint.cat : ''; h.classList.toggle('off', mode === 'post'); }
+  function applyFocus(snap) {
+    var f = theme.focus(mode, cat, sel, tgtT); tgtR = f.r; tgtPitch = f.pitch; flyT = 1.4; zoom = 1;
+    if (snap) { target.copy(tgtT); R = tgtR; pitch = tgtPitch; yaw = theme.yaw0; vyaw = vpitch = 0; flyT = 0; }
+  }
+  function setSub() {
+    $('sub').textContent = cat >= 0 ? CATS[cat].name + ' · 글 ' + inCat(cat).length + '편' : theme.sub;
+    $('back').hidden = cat < 0;
+  }
+  function goOver(snap) { mode = 'over'; cat = -1; sel = -1; closeCard(); applyFocus(snap); setSub(); setHint(); }
+  function goCat(k) { mode = 'cat'; cat = k; sel = -1; closeCard(); applyFocus(false); setSub(); setHint(); }
+  function openPost(id) {
+    var p = POSTS[id], c = CATS[p.c];
+    mode = 'post'; sel = id; cat = p.c; applyFocus(false); flyT = 1; setSub(); setHint();
+    $('mcat').textContent = c.name; $('mcat').style.color = 'hsl(' + c.h + ',' + c.s + '%,72%)';
+    $('mdate').textContent = p.m + '월 ' + p.d + '일'; $('mread').textContent = '· ' + p.r + '분';
+    $('mtitle').textContent = p.t; $('mtext').textContent = p.x; $('mviews').textContent = '조회 ' + (p.v + 1);
+    var ph = $('photo');
+    if (p.photo) { ph.hidden = false; ph.getContext('2d').drawImage(paintPhoto(p.photo, 184, 138), 0, 0); } else ph.hidden = true;
+    updLike(); $('card').classList.add('open');
+  }
+  function closeCard() { $('card').classList.remove('open'); }
+  function closePost() { if (mode !== 'post') return; mode = 'cat'; sel = -1; closeCard(); applyFocus(false); setHint(); }
+  function updLike() {
+    var p = POSTS[sel]; if (!p) return; var on = !!liked[p.id];
+    $('mlike').textContent = (on ? '♥ ' : '♡ ') + (p.l + (on ? 1 : 0)); $('mlike').classList.toggle('on', on);
+  }
+  $('mlike').addEventListener('click', function () {
+    var p = POSTS[sel]; if (!p) return; liked[p.id] = !liked[p.id]; if (!liked[p.id]) delete liked[p.id];
+    try { localStorage.setItem('sp3d-liked', JSON.stringify(liked)); } catch (e) {}
+    updLike();
+  });
+  $('mclose').addEventListener('click', closePost);
+  $('back').addEventListener('click', function () { if (mode === 'post') closePost(); else goOver(false); });
+
+  function useTheme(name) {
+    if (!builders[name]) name = 'space';
+    if (!built[name]) built[name] = builders[name]();
+    if (theme) theme.layer.style.display = 'none';
+    theme = built[name]; themeName = name; theme.layer.style.display = '';
+    var tabs = document.querySelectorAll('.tabs [data-t]'), i;
+    for (i = 0; i < tabs.length; i++) tabs[i].classList.toggle('on', tabs[i].getAttribute('data-t') === name);
+    goOver(true);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.tabs [data-t]'), function (b) {
+    b.addEventListener('click', function () { var n = b.getAttribute('data-t'); try { history.replaceState(null, '', '#' + n); } catch (e) { location.hash = n; } useTheme(n); });
+  });
+  window.addEventListener('hashchange', function () { var n = (location.hash || '').replace('#', ''); if (builders[n] && n !== themeName) useTheme(n); });
+
+  /* ---------- input ---------- */
+  var ptrs = {}, nptr = 0, downX = 0, downY = 0, moved = false, lastX = 0, lastY = 0, pinch0 = 0, zoom0 = 1, lastMoveT = 0;
+  var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function pLim() { return theme.lim.pitch; }
+  cv.addEventListener('pointerdown', function (e) {
+    cv.setPointerCapture(e.pointerId); ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; nptr = Object.keys(ptrs).length;
+    if (nptr === 1) { downX = lastX = e.clientX; downY = lastY = e.clientY; moved = false; vyaw = vpitch = 0; }
+    else if (nptr === 2) { var k = Object.keys(ptrs), a = ptrs[k[0]], b = ptrs[k[1]]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = zoom; moved = true; }
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!ptrs[e.pointerId]) return;
+    ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (nptr === 2) {
+      var k = Object.keys(ptrs), a = ptrs[k[0]], b = ptrs[k[1]], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch0 > 10) zoom = clamp(zoom0 * pinch0 / d, 0.55, 1.6); return;
+    }
+    var dx = e.clientX - lastX, dy = e.clientY - lastY;
+    if (!moved && Math.hypot(e.clientX - downX, e.clientY - downY) > 6) moved = true;
+    if (moved) {
+      var pl = pLim(); yaw -= dx * 0.006; pitch = clamp(pitch + dy * 0.005, pl[0], pl[1]); vyaw = -dx * 0.006; vpitch = dy * 0.005; lastMoveT = performance.now();
+    }
+    lastX = e.clientX; lastY = e.clientY;
+  });
+  function endPtr(e) {
+    if (!ptrs[e.pointerId]) return;
+    var wasOne = nptr === 1; delete ptrs[e.pointerId]; nptr = Object.keys(ptrs).length;
+    if (wasOne && !moved) tap(e.clientX, e.clientY);
+    if (performance.now() - lastMoveT > 90) { vyaw = vpitch = 0; }
+  }
+  cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+  cv.addEventListener('wheel', function (e) { e.preventDefault(); zoom = clamp(zoom * (1 + e.deltaY * 0.001), 0.55, 1.6); }, { passive: false });
+  function tap(x, y) {
+    ndc.set(x / W * 2 - 1, -(y / H) * 2 + 1); ray.setFromCamera(ndc, camera);
+    var hit = ray.intersectObjects(theme.pickList(mode, cat), false)[0];
+    if (!hit) { if (mode === 'post') closePost(); return; }
+    var ud = hit.object.userData;
+    if (ud.type === 'cat') goCat(ud.idx); else if (ud.type === 'post') openPost(ud.idx);
+  }
+  window.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (mode === 'post') closePost(); else if (mode === 'cat') goOver(false); } });
+
+  /* ---------- loop ---------- */
+  var clock = new THREE.Clock(), tAcc = 0, ftSum = 0, ftN = 0;
+  function frame() {
+    requestAnimationFrame(frame);
+    if (document.hidden) { clock.getDelta(); return; }
+    var dt = Math.min(0.05, clock.getDelta()); tAcc += dt; ftSum += dt; ftN++;
+    if (ftN === 90) { if (ftSum / ftN > 0.024 && DPR > 1) { DPR = Math.max(1, DPR - 0.5); renderer.setPixelRatio(DPR); renderer.setSize(W, H, false); } ftSum = 0; ftN = 0; }
+    theme.update(dt, tAcc);
+    var f = theme.focus(mode, cat, sel, tgtT), pl = theme.lim.pitch, yl = theme.lim.yaw, k = 1 - Math.exp(-dt * (mode === 'post' ? 4.2 : 3));
+    tgtR = f.r; target.lerp(tgtT, k);
+    R += (tgtR * (mode === 'post' ? 1 : zoom) - R) * k;
+    if (flyT > 0) { flyT -= dt; if (nptr === 0) pitch += (f.pitch - pitch) * (1 - Math.exp(-dt * 2.5)); }
+    if (nptr === 0) {
+      yaw += vyaw; pitch = clamp(pitch + vpitch, pl[0], pl[1]); vyaw *= 0.94; vpitch *= 0.94;
+      var sp = mode === 'over' ? theme.spin.over : theme.spin.cat;
+      if (!reduce && sp && Math.abs(vyaw) < 0.0008) yaw += dt * sp;
+    }
+    if (yl) yaw = clamp(yaw, yl[0], yl[1]);
+    var yv = yaw + (nptr === 0 && !reduce ? Math.sin(tAcc * 0.25) * theme.sway : 0), cp = Math.cos(pitch);
+    camera.position.set(target.x + R * cp * Math.sin(yv), target.y + R * Math.sin(pitch), target.z + R * cp * Math.cos(yv));
+    camera.lookAt(target);
+    theme.labels(mode, cat, sel);
+    renderer.render(theme.scene, camera);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  var first = (location.hash || '').replace('#', '');
+  useTheme(builders[first] ? first : 'space');
+  frame();
+})();
+</script>
