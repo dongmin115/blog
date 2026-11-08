@@ -35,8 +35,11 @@ export async function mountScene(host) {
   const col = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  // 빛 이미지는 투명도 없이 '검정 바탕에 흰 번짐'으로 만들어요(합성은 전부 더하기라 보이는 밝기는 같아요).
+  // 투명한 흰 번짐으로 만들면 폰(특히 iOS)에서 가장자리의 아주 옅은 부분이 빨강/초록/파랑 점으로 어긋나 보여요.
   function radialTex(size, stops) {
     const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'), h = size / 2;
+    g.fillStyle = '#000'; g.fillRect(0, 0, size, size);
     const gr = g.createRadialGradient(h, h, 0, h, h, h); stops.forEach((s) => gr.addColorStop(s[0], s[1]));
     g.fillStyle = gr; g.fillRect(0, 0, size, size); return new THREE.CanvasTexture(c);
   }
@@ -123,6 +126,7 @@ export async function mountScene(host) {
   }
   const CROSS = (() => { // 밝은 별에 번지는 가는 십자 빛
     const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, 128, 128);
     for (let i = 0; i < 2; i++) {
       const gr = i ? g.createLinearGradient(64, 0, 64, 128) : g.createLinearGradient(0, 64, 128, 64);
       gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
@@ -239,7 +243,7 @@ export async function mountScene(host) {
 
   /* ---------- 상태와 카메라 ---------- */
   let mode = 'over', cat = -1, sel = null, selObj = null, busy = false;
-  let yaw = 0.22, pitch = 0.55, vyaw = 0, vpitch = 0, zoom = 1, flyT = 0, R = 40, tgtR = 40, tgtPitch = 0.55, spin = 0;
+  let yaw = 0.22, pitch = 0.55, vyaw = 0, vpitch = 0, zoom = 1, flyT = 0, R = 40, tgtR = 40, tgtPitch = 0.55, spin = 0, swayK = 0;
   const target = new THREE.Vector3(), tgtT = new THREE.Vector3(), wp = new THREE.Vector3(), v3b = new THREE.Vector3();
   const LIM_PITCH = [-0.9, 1.2]; // 좌우(yaw)는 제한 없이 360도, 위아래만 뒤집히지 않게 제한
 
@@ -311,6 +315,8 @@ export async function mountScene(host) {
   const endPtr = (e) => {
     if (!ptrs[e.pointerId]) return;
     const wasOne = nptr === 1; delete ptrs[e.pointerId]; nptr = Object.keys(ptrs).length;
+    // 두 손가락 중 하나를 떼면 남은 손가락의 지금 위치에서 다시 시작해요. (기준점을 안 바꾸면 핀치 시작 위치와의 차이만큼 시점이 한 번에 튀어요.)
+    if (nptr === 1) { const r = Object.values(ptrs)[0]; lastX = r.x; lastY = r.y; vyaw = vpitch = 0; }
     if (wasOne && !moved) tap(e.clientX, e.clientY);
     if (performance.now() - lastMoveT > 90) { vyaw = vpitch = 0; }
   };
@@ -367,7 +373,9 @@ export async function mountScene(host) {
     tgtR = f.r; target.lerp(tgtT, k); R += (tgtR * (mode === 'post' ? 1 : zoom) - R) * k;
     if (flyT > 0) { flyT -= dt; if (nptr === 0) pitch += (f.pitch - pitch) * (1 - Math.exp(-dt * 2.5)); }
     if (nptr === 0) { yaw += vyaw; pitch = clamp(pitch + vpitch, LIM_PITCH[0], LIM_PITCH[1]); vyaw *= 0.94; vpitch *= 0.94; }
-    const yv = yaw + (nptr === 0 && !reduce ? Math.sin(tAcc * 0.25) * 0.05 : 0), cp = Math.cos(pitch);
+    // 손을 대면 자동 유영이 부드럽게 꺼지고, 떼면 부드럽게 켜져요(갑자기 바뀌면 손을 뗄 때 시점이 살짝 튀어요).
+    swayK += ((nptr === 0 && !reduce ? 1 : 0) - swayK) * (1 - Math.exp(-dt * 4));
+    const yv = yaw + Math.sin(tAcc * 0.25) * 0.05 * swayK, cp = Math.cos(pitch);
     camera.position.set(target.x + R * cp * Math.sin(yv), target.y + R * Math.sin(pitch), target.z + R * cp * Math.cos(yv));
     camera.lookAt(target);
     // 이름표 위치를 계산하기 전에 카메라 행렬을 이번 프레임 값으로 갱신해요. 안 하면 렌더 때까지 지난 프레임 행렬이 남아 이름표가 한 프레임 늦게 따라와서 돌릴 때 떨려 보여요.
