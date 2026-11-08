@@ -3,7 +3,7 @@ import Hint from '../components/Hint/Hint';
 import Notice from '../components/Notice/Notice';
 import PostCard from '../components/PostCard/PostCard';
 import TopBar from '../components/TopBar/TopBar';
-import { SITE_SUB, SITE_TITLE } from '../config';
+import { SITE_TITLE } from '../config';
 import { loadData } from '../data/loadData';
 import type { BlogData, Post } from '../data/types';
 import { DEFAULT_THEME, FALLBACK_THEME, THEMES } from '../themes/registry';
@@ -67,8 +67,7 @@ export default function App() {
         )}
       </div>
       <TopBar
-        title={SITE_TITLE}
-        sub={sub || SITE_SUB}
+        sub={sub}
         onBack={back?.fn}
         themes={THEMES}
         themeId={themeId}

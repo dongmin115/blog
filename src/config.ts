@@ -3,5 +3,5 @@
 export const API_URL = '';
 // 우주 테마: 이 해부터 작년까지는 글이 없어도 별자리를 어두운 채로 미리 그려 둬요(나중에 옛 글을 채울 자리).
 export const FIRST_YEAR = 2025;
-export const SITE_TITLE = '블로그';
-export const SITE_SUB = '살면서 느끼고 생각한 것들';
+// 브라우저 탭과 링크 공유 미리보기에 쓰이는 이름(화면 왼쪽 위에는 표시하지 않아요). index.html의 <title>도 같이 바꿔요.
+export const SITE_TITLE = '@dongmin115/blog';

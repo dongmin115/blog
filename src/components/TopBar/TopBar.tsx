@@ -3,7 +3,6 @@ import type { ThemeDef } from '../../themes/types';
 import './TopBar.css';
 
 interface Props {
-  title: string;
   sub: string;
   onBack?: () => void;
   themes: ThemeDef[];
@@ -11,11 +10,10 @@ interface Props {
   onTheme(id: string): void;
 }
 
-export default function TopBar({ title, sub, onBack, themes, themeId, onTheme }: Props) {
+export default function TopBar({ sub, onBack, themes, themeId, onTheme }: Props) {
   return (
     <header className="top">
       <div className="brand">
-        <b>{title}</b>
         <span>{sub}</span>
       </div>
       <div className="actions">
