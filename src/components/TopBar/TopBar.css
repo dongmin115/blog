@@ -1,0 +1,10 @@
+.top {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 5; pointer-events: none;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
+}
+.brand { min-width: 0; }
+.brand b { display: block; font-family: var(--f-d); font-size: 21px; letter-spacing: -0.01em; }
+.brand span { display: block; margin-top: 3px; font-size: 13px; color: var(--mut); }
+.actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.actions .btn { height: 40px; padding: 0 14px; }

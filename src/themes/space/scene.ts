@@ -1,28 +1,20 @@
-// 우주 테마: 카테고리 = 별자리, 글 = 별. 별을 누르면 행성으로 다가가요. (Three.js)
-const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+// @ts-nocheck — Three.js 장면은 명령형 코드를 그대로 옮겨 온 것이라 타입 검사를 끄고 있어요.
+// 우주 테마의 3D 장면: 카테고리 = 별자리, 글 = 별. 별을 누르면 행성으로 다가가요.
+import * as THREE from 'three';
 
-function loadThree() {
-  if (window.THREE) return Promise.resolve(window.THREE);
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = THREE_URL; s.async = true;
-    s.onload = () => (window.THREE ? resolve(window.THREE) : reject(new Error('THREE')));
-    s.onerror = () => reject(new Error('three load'));
-    document.head.appendChild(s);
-  });
-}
-
-export async function mount(host) {
-  const THREE = await loadThree();
+export async function mountScene(host) {
   const { el, data, ui, reduce } = host;
   const CATS = data.cats, POSTS = data.posts, inCat = data.inCat, RK = reduce ? 0 : 1;
 
   /* ---------- 렌더러 ---------- */
   const cv = document.createElement('canvas'); el.appendChild(cv);
   const layer = document.createElement('div'); layer.className = 'labs'; el.appendChild(layer);
+  // r128 때의 색감을 유지: 최신 three의 자동 색 관리를 끄고 선형 출력으로 그려요.
+  THREE.ColorManagement.enabled = false;
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' }); }
   catch (e) { cv.remove(); layer.remove(); throw e; }
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   let DPR = Math.min(window.devicePixelRatio || 1, 2);
   renderer.setPixelRatio(DPR);
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
@@ -86,7 +78,7 @@ export async function mount(host) {
     });
     scene.add(grp); return grp;
   })();
-  scene.add(new THREE.AmbientLight(0x6070a0, 0.5));
+  scene.add(new THREE.AmbientLight(0x6070a0, 0.5 * Math.PI));
   const key = new THREE.PointLight(0xfff0d8, 0, 30, 1.2); scene.add(key);
 
   // 카테고리가 4개보다 많거나 적어도 자리를 잡아 줘요.
@@ -251,7 +243,7 @@ export async function mount(host) {
         if (nd.photo) { const pw = (mode === 'cat' && k === cat) ? 1 : 0; nd.photo.material.opacity += (pw - nd.photo.material.opacity) * (1 - Math.exp(-dt * 4)); }
       });
     });
-    const wk = (mode === 'post' && nodes[sel]) ? 2.6 : 0;
+    const wk = (mode === 'post' && nodes[sel]) ? 2.6 * Math.PI : 0;
     if (wk) { nodes[sel].glow.getWorldPosition(kp); key.position.set(kp.x + 1.6, kp.y + 1.4, kp.z + 2.4); }
     key.intensity += (wk - key.intensity) * (1 - Math.exp(-dt * 3));
     sky.rotation.y += dt * 0.003 * RK; scene.updateMatrixWorld(true);

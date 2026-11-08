@@ -1,0 +1,2 @@
+.hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); text-align: center; padding: 0 max(16px, env(safe-area-inset-left, 0px)); font-size: 13px; color: var(--mut); pointer-events: none; transition: opacity .3s; text-shadow: 0 1px 6px #000; z-index: 4; }
+.hint.off { opacity: 0; }

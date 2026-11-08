@@ -1,0 +1,1 @@
+.notice { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; line-height: 1.7; color: var(--mut); z-index: 3; pointer-events: none; }

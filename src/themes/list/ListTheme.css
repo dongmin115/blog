@@ -1,0 +1,7 @@
+.listview { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(env(safe-area-inset-top, 0px) + 84px) max(16px, env(safe-area-inset-left, 0px)) calc(env(safe-area-inset-bottom, 0px) + 32px) max(16px, env(safe-area-inset-right, 0px)); box-sizing: border-box; }
+.listview > div { max-width: 640px; margin: 0 auto; }
+.listview h3 { font-family: var(--f-d); font-size: 16px; margin: 24px 0 8px; display: flex; align-items: baseline; gap: 8px; }
+.listview h3 small { font: 12px var(--f-b); color: var(--mut); }
+.listview a.item { display: block; padding: 12px 14px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,0.03); color: var(--fg); text-decoration: none; }
+.listview a.item b { display: block; font-family: var(--f-d); font-size: 16px; }
+.listview a.item span { font-size: 12px; color: var(--mut); }
